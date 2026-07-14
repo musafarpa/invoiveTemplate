@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Healthcare Tax Invoice Template</title>
+<style>
+  :root {
+    --accent: #0f766e;
+    --accent-dark: #0b5850;
+    --accent-2: #115e59;
+    --accent-soft: #e6f4f2;
+    --ink: #1a2230;
+    --muted: #5b6675;
+    --line: #d7dee6;
+    --line-soft: #eef2f6;
+    --zebra: #f6f9fb;
+    --paper: #ffffff;
+    --danger: #b42318;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", "Inter", Arial, sans-serif;
+    background: #e9edf1; color: var(--ink);
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px; background: #0d1b2a; color: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,.15);
+  }
+  .toolbar h1 { font-size: 15px; font-weight: 600; margin-right: auto; letter-spacing: .3px; }
+  .toolbar .seg { display: inline-flex; background: rgba(255,255,255,.08); border-radius: 8px; padding: 3px; }
+  .toolbar .seg button { border: 0; background: transparent; color: #cbd5e1; cursor: pointer; font-size: 13px; font-weight: 600; padding: 7px 14px; border-radius: 6px; transition: .15s; }
+  .toolbar .seg button.active { background: var(--accent); color: #fff; }
+  .toolbar .print-btn { border: 0; background: #fff; color: #0d1b2a; cursor: pointer; font-size: 13px; font-weight: 700; padding: 8px 16px; border-radius: 8px; display: inline-flex; gap: 8px; align-items: center; }
+  .toolbar .print-btn:hover { background: #e8eef4; }
+
+  /* ---------- A4 sheet ---------- */
+  .sheet {
+    width: 210mm; min-height: 297mm; margin: 22px auto;
+    background: var(--paper); box-shadow: 0 10px 40px rgba(0,0,0,.14);
+    position: relative; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .invoice { display: none; flex-direction: column; flex: 1; }
+  .invoice.active { display: flex; }
+  .pad { padding: 0 13mm; }
+
+  /* ---------- Bold header band ---------- */
+  .band {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    color: #fff; padding: 20px 13mm;
+    display: grid; grid-template-columns: 1.5fr 1fr; align-items: center; gap: 20px;
+  }
+  .band .brand { display: flex; align-items: center; gap: 14px; }
+  .band .logo { width: 58px; height: 58px; flex-shrink: 0; background: rgba(255,255,255,.14); border-radius: 13px; padding: 7px; }
+  .band .logo svg { width: 100%; height: 100%; display: block; }
+  .band .co-en { font-size: 15.5px; font-weight: 800; letter-spacing: .1px; line-height: 1.25; }
+  .band .co-ar { font-size: 14px; font-weight: 600; direction: rtl; opacity: .95; margin-top: 2px; }
+  .band .tag { font-size: 10.5px; opacity: .8; margin-top: 3px; }
+  .band .docinfo { text-align: right; }
+  .band .docinfo .title { font-size: 20px; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; }
+  .band .docinfo .title-ar { font-size: 13px; opacity: .9; direction: rtl; margin-top: 1px; margin-bottom: 8px; }
+  .band .docinfo .kv { font-size: 11px; opacity: .95; line-height: 1.7; }
+  .band .docinfo .kv b { font-weight: 700; }
+  .band .paid { display: inline-block; margin-top: 8px; border: 2px solid #7ee0b8; color: #d6fff0; font-size: 12px; font-weight: 800; letter-spacing: 2px; padding: 3px 12px; border-radius: 6px; text-transform: uppercase; }
+
+  /* thin reg strip */
+  .regstrip {
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 24px;
+    background: var(--accent-soft); color: var(--accent-dark);
+    font-size: 11px; padding: 8px 13mm; border-bottom: 1px solid #cfe6e2;
+  }
+  .regstrip b { color: var(--accent-dark); }
+
+  /* ---------- info grid ---------- */
+  .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 26px; margin: 18px 0 4px; }
+  .block { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .block h3 { background: var(--line-soft); font-size: 10.5px; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); padding: 7px 12px; border-bottom: 1px solid var(--line); }
+  .block .rows { padding: 9px 12px; }
+  .block .row { display: flex; font-size: 11.5px; padding: 3.5px 0; }
+  .block .row .k { width: 45%; color: var(--muted); }
+  .block .row .v { width: 55%; color: var(--ink); font-weight: 600; }
+
+  /* ---------- items ---------- */
+  .sec-title { font-size: 11px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: var(--accent-dark); margin: 18px 0 8px; }
+  table.items { width: 100%; border-collapse: collapse; }
+  table.items thead th { background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 700; padding: 9px 6px; text-align: left; border-right: 1px solid rgba(255,255,255,.18); }
+  table.items thead th .ar { display: block; font-size: 9px; font-weight: 500; opacity: .85; direction: rtl; }
+  table.items thead th:last-child { border-right: 0; }
+  table.items tbody td { font-size: 11px; padding: 8px 6px; border-bottom: 1px solid var(--line-soft); border-right: 1px solid var(--line-soft); vertical-align: top; }
+  table.items tbody td:last-child { border-right: 0; }
+  table.items tbody tr:nth-child(even) { background: var(--zebra); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .center { text-align: center; }
+  table.items tfoot td { font-size: 11.5px; font-weight: 700; padding: 9px 6px; border-top: 2px solid var(--accent); background: var(--accent-soft); }
+
+  /* ---------- bottom ---------- */
+  .bottom { display: grid; grid-template-columns: 1fr 320px; gap: 20px; margin-top: 18px; }
+  .vat-note { border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px; font-size: 11px; color: var(--muted); height: fit-content; }
+  .vat-note h4 { font-size: 11px; color: var(--ink); margin-bottom: 7px; text-transform: uppercase; letter-spacing: .5px; }
+  .vat-note .vrow { display: flex; justify-content: space-between; padding: 2.5px 0; }
+
+  .summary { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .summary .srow { display: flex; justify-content: space-between; padding: 8px 13px; font-size: 12px; border-bottom: 1px solid var(--line-soft); }
+  .summary .srow .lbl { color: var(--muted); }
+  .summary .srow .val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .summary .srow.head { background: var(--line-soft); color: var(--ink); font-weight: 800; font-size: 10.5px; text-transform: uppercase; letter-spacing: .6px; }
+  .summary .srow.grand { background: var(--accent); color: #fff; font-size: 14px; font-weight: 800; border-bottom: 0; }
+  .summary .srow.grand .lbl { color: #fff; }
+  .summary .srow.sub .lbl { padding-left: 10px; }
+
+  /* ---------- bank + amount-in-words ---------- */
+  .bank { border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px; margin-top: 12px; font-size: 11px; }
+  .bank h4 { font-size: 11px; color: var(--ink); margin-bottom: 7px; text-transform: uppercase; letter-spacing: .5px; }
+  .bank .brow { display: flex; padding: 2.5px 0; }
+  .bank .brow .k { width: 40%; color: var(--muted); }
+  .bank .brow .v { width: 60%; color: var(--ink); font-weight: 600; }
+
+  .words-row {
+    display: flex; align-items: center; gap: 14px; margin-top: 16px;
+    border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 8px;
+    padding: 12px 16px; background: #fbfdfe;
+  }
+  .words-row .aw { flex: 1; }
+  .words-row .aw .lbl { font-size: 9.5px; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); }
+  .words-row .aw .val { font-size: 14px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+  .words-row .cur { font-size: 12px; font-weight: 800; color: var(--accent-dark); background: var(--accent-soft); border: 1px solid #bfe0db; border-radius: 6px; padding: 6px 12px; white-space: nowrap; }
+
+  /* Terms & conditions */
+  .tc { margin-top: 16px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .tc h4 { background: var(--line-soft); font-size: 10.5px; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); padding: 7px 13px; border-bottom: 1px solid var(--line); }
+  .tc ul { list-style: none; padding: 10px 14px; columns: 2; column-gap: 26px; }
+  .tc li { font-size: 10.5px; color: var(--muted); line-height: 1.55; padding: 2px 0 2px 14px; position: relative; break-inside: avoid; }
+  .tc li::before { content: "•"; color: var(--accent); position: absolute; left: 2px; font-weight: 800; }
+
+  /* ---------- footer ---------- */
+  .foot { margin-top: auto; padding: 14px 13mm 16px; border-top: 1px dashed var(--line); }
+  .foot .sign-row { display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; color: var(--muted); }
+  .foot .sign-box { text-align: center; }
+  .foot .sign-line { width: 170px; border-top: 1px solid var(--muted); margin-bottom: 4px; height: 28px; }
+  .foot .terms { font-size: 10px; color: var(--danger); text-align: center; margin: 10px 0; }
+  .foot .terms .ar { direction: rtl; display: block; margin-top: 2px; color: var(--muted); }
+  .foot .contact { text-align: center; font-size: 10px; color: var(--muted); margin-top: 10px; line-height: 1.6; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+
+  /* ---------- print ---------- */
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none !important; }
+    .sheet { margin: 0; box-shadow: none; width: auto; min-height: auto; }
+    @page { size: A4; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>🧾 UAE Healthcare Tax Invoice — Template</h1>
+  <div class="seg">
+    <button id="btn-medical" class="active" onclick="show('medical')">Medical Consultation</button>
+    <button id="btn-pharmacy" onclick="show('pharmacy')">Pharmacy Invoice</button>
+  </div>
+  <button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
+</div>
+
+<div class="sheet">
+
+  <!-- ================= MEDICAL ================= -->
+  <div class="invoice active" id="medical">
+    <div class="band">
+      <div class="brand">
+        <div class="logo">
+          <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" aria-label="Adam & Eve">
+            <path d="M30 20c-1.3-3.2-4.4-5.4-8-5.4-4.9 0-8.6 3.9-8.6 8.9 0 6.9 8.4 13.3 16.6 18.9 8.2-5.6 16.6-12 16.6-18.9 0-5-3.7-8.9-8.6-8.9-3.6 0-6.7 2.2-8 5.4z" fill="#ffffff"/>
+            <path d="M31.5 15.6c1.1-2 3-3.5 5.2-4.1" stroke="#8fd6cd" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+            <circle cx="36.8" cy="10.5" r="2.6" fill="#8fd6cd"/>
+          </svg>
+        </div>
+        <div>
+          <div class="co-en">Adam &amp; Eve Specialized Medical Centre</div>
+          <div class="co-ar">مركز آدم وحواء الطبي التخصصي</div>
+          <div class="tag">Healing Hands. Caring Hearts.</div>
+        </div>
+      </div>
+      <div class="docinfo">
+        <div class="title">Tax Invoice</div>
+        <div class="title-ar">فاتورة ضريبية</div>
+        <div class="kv"><b>Invoice No:</b> AESACBL858293</div>
+        <div class="kv"><b>Invoice Date:</b> 23-06-2026</div>
+        <div class="paid">✔ Paid</div>
+      </div>
+    </div>
+
+    <div class="regstrip">
+      <span><b>VAT Reg No:</b> 100317163201543</span>
+      <span><b>Currency:</b> AED (UAE Dirham)</span>
+      <span><b>Abu Dhabi, United Arab Emirates</b></span>
+    </div>
+
+    <div class="pad" style="display:flex; flex-direction:column; flex:1;">
+      <section class="meta">
+        <div class="block">
+          <h3>Patient Details / بيانات المريض</h3>
+          <div class="rows">
+            <div class="row"><span class="k">Name</span><span class="v">Ms. Zhang Qin</span></div>
+            <div class="row"><span class="k">MR No</span><span class="v">AEMC237826</span></div>
+            <div class="row"><span class="k">Visit ID</span><span class="v">OP1239473</span></div>
+            <div class="row"><span class="k">Member ID</span><span class="v">—</span></div>
+          </div>
+        </div>
+        <div class="block">
+          <h3>Encounter / Insurance</h3>
+          <div class="rows">
+            <div class="row"><span class="k">Doctor Name</span><span class="v">Dr. Naseeba P.P</span></div>
+            <div class="row"><span class="k">Insurance Co</span><span class="v">—</span></div>
+            <div class="row"><span class="k">TPA / Sponsor</span><span class="v">—</span></div>
+            <div class="row"><span class="k">Claim ID</span><span class="v">—</span></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="sec-title">Invoice Items / بنود الفاتورة</div>
+      <table class="items">
+        <thead>
+          <tr>
+            <th style="width:12%">Code<span class="ar">الرمز</span></th>
+            <th style="width:34%">Description<span class="ar">الوصف</span></th>
+            <th class="num" style="width:9%">Rate<span class="ar">السعر</span></th>
+            <th class="center" style="width:6%">Qty<span class="ar">الكمية</span></th>
+            <th class="num" style="width:9%">Gross<span class="ar">الإجمالي</span></th>
+            <th class="num" style="width:8%">Disc<span class="ar">خصم</span></th>
+            <th class="num" style="width:10%">VAT<span class="ar">ضريبة</span></th>
+            <th class="num" style="width:12%">Amount<span class="ar">المبلغ</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>99897</td>
+            <td>Dr. Naseeba Padinhare Peediyekkal — Consultation</td>
+            <td class="num">75.00</td>
+            <td class="center">1</td>
+            <td class="num">75.00</td>
+            <td class="num">0.00</td>
+            <td class="num">0.00</td>
+            <td class="num">75.00</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4" class="num">Totals</td>
+            <td class="num">75.00</td>
+            <td class="num">0.00</td>
+            <td class="num">0.00</td>
+            <td class="num">75.00</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <section class="bottom">
+        <div>
+          <div class="vat-note">
+            <h4>VAT Summary</h4>
+            <div class="vrow"><span>VAT @ 5%</span><span>0.00</span></div>
+            <div class="vrow"><span>VAT on Patient Amount</span><span>0.00</span></div>
+            <div class="vrow"><span>VAT on Sponsor Amount</span><span>0.00</span></div>
+          </div>
+          <div class="bank">
+            <h4>Bank / Payment Details</h4>
+            <div class="brow"><span class="k">Account Name</span><span class="v">Adam &amp; Eve Specialized Medical Centre</span></div>
+            <div class="brow"><span class="k">Bank</span><span class="v">First Abu Dhabi Bank (FAB)</span></div>
+            <div class="brow"><span class="k">IBAN</span><span class="v">AE12 0350 0000 0123 4567 891</span></div>
+          </div>
+        </div>
+        <div class="summary">
+          <div class="srow grand"><span class="lbl">Total Payable (AED)</span><span class="val">75.00</span></div>
+          <div class="srow head"><span class="lbl">Sponsor</span><span class="val"></span></div>
+          <div class="srow sub"><span class="lbl">Sponsor Amount</span><span class="val">0.00</span></div>
+          <div class="srow sub"><span class="lbl">Sponsor Pay</span><span class="val">0.00</span></div>
+          <div class="srow sub"><span class="lbl">Sponsor Due</span><span class="val">0.00</span></div>
+          <div class="srow head"><span class="lbl">Patient</span><span class="val"></span></div>
+          <div class="srow sub"><span class="lbl">Patient Amount (Copay)</span><span class="val">75.00</span></div>
+          <div class="srow sub"><span class="lbl">Patient Pay</span><span class="val">75.00</span></div>
+          <div class="srow sub"><span class="lbl">Patient Due</span><span class="val">0.00</span></div>
+        </div>
+      </section>
+
+      <div class="words-row">
+        <div class="aw">
+          <div class="lbl">Amount in Words</div>
+          <div class="val">UAE Dirham Seventy-Five Only</div>
+        </div>
+        <div class="cur">AED 75.00</div>
+      </div>
+
+      <div class="tc">
+        <h4>Terms &amp; Conditions / الشروط والأحكام</h4>
+        <ul>
+          <li>This is a computer-generated tax invoice and is valid without a physical signature.</li>
+          <li>All amounts are stated in UAE Dirham (AED) and are inclusive of VAT where applicable.</li>
+          <li>Payment is due upon receipt of this invoice unless covered by an approved sponsor / insurance.</li>
+          <li>Consultation fees are non-refundable once the service has been rendered.</li>
+          <li>For any billing queries, please contact the accounts department within 7 days.</li>
+          <li>Please retain this invoice for insurance reimbursement and record purposes.</li>
+        </ul>
+      </div>
+    </div>
+
+    <footer class="foot">
+      <div class="sign-row">
+        <div>Prepared By: <b>J. Abhirami</b></div>
+        <div class="sign-box"><div class="sign-line"></div>Patient Signature / توقيع المريض</div>
+      </div>
+      <div class="contact">
+        Adam &amp; Eve Specialized Medical Centre &nbsp;•&nbsp; Abu Dhabi, United Arab Emirates<br>
+        This is a computer-generated tax invoice.
+      </div>
+    </footer>
+  </div>
+
+  <!-- ================= PHARMACY ================= -->
+  <div class="invoice" id="pharmacy">
+    <div class="band" style="background:linear-gradient(135deg,#0d1b2a 0%,#16324f 100%);">
+      <div class="brand">
+        <div class="logo">
+          <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" aria-label="Knight Pharmacy">
+            <path d="M22 46h18c0-2.4-.9-4.2-2.6-5.4 3.2-2.8 5.1-6.9 5.1-11.7 0-2.6-.6-4.7-1.9-7.1l1.4-2.1c.5-.8.1-1.9-.8-2.2l-3.5-1.1-1.7-3.1c-.4-.8-1.5-.9-2.1-.3l-2 2c-3.6-.4-6.9.7-9.6 3.2-2 1.9-2.4 3.6-1.6 5 .5.9 1.5 1.2 2.4.8l2.3-1c.5 1.4.2 2.6-1 3.9l-4.6 4.9c-1.2 1.3-1.3 2.9-.2 3.9.7.7 1.7.8 2.6.4-1 2-1.5 3.3-1.5 5.2 0 1.2.4 2.5 1.3 3.5z" fill="#ffffff"/>
+            <circle cx="26" cy="24" r="1.7" fill="#16324f"/>
+            <rect x="20" y="47.5" width="22" height="4" rx="1.2" fill="#c9a24a"/>
+          </svg>
+        </div>
+        <div>
+          <div class="co-en">Knight Pharmacy LLC</div>
+          <div class="co-ar">صيدلية نايت</div>
+          <div class="tag">Electra Branch • Abu Dhabi</div>
+        </div>
+      </div>
+      <div class="docinfo">
+        <div class="title">Tax Invoice</div>
+        <div class="title-ar">فاتورة ضريبية</div>
+        <div class="kv"><b>Bill No:</b> 198573</div>
+        <div class="kv"><b>Bill Date:</b> 23-06-2026</div>
+        <div class="paid">✔ Paid</div>
+      </div>
+    </div>
+
+    <div class="regstrip" style="background:#eaeef3; color:#26364a; border-color:#d3dae3;">
+      <span><b>TRN:</b> 100294168801543</span>
+      <span><b>Prescription Date:</b> 23-06-2026</span>
+      <span><b>Currency:</b> AED (UAE Dirham)</span>
+    </div>
+
+    <div class="pad" style="display:flex; flex-direction:column; flex:1;">
+      <section class="meta">
+        <div class="block">
+          <h3>Customer Details / بيانات العميل</h3>
+          <div class="rows">
+            <div class="row"><span class="k">Customer Name</span><span class="v">Zhang</span></div>
+            <div class="row"><span class="k">Patient Name</span><span class="v">Zhang Qin</span></div>
+            <div class="row"><span class="k">Customer TRN</span><span class="v">—</span></div>
+          </div>
+        </div>
+        <div class="block">
+          <h3>Billing Info</h3>
+          <div class="rows">
+            <div class="row"><span class="k">Bill No</span><span class="v">198573</span></div>
+            <div class="row"><span class="k">Biller Name</span><span class="v">Abhijith K.</span></div>
+            <div class="row"><span class="k">Payment Type</span><span class="v">Cash</span></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="sec-title">Invoice Items / بنود الفاتورة</div>
+      <table class="items">
+        <thead>
+          <tr>
+            <th class="center" style="width:5%">S.No<span class="ar">الرقم</span></th>
+            <th style="width:34%">Product Name<span class="ar">اسم المنتج</span></th>
+            <th class="center" style="width:8%">UOM<span class="ar">الوحدة</span></th>
+            <th class="num" style="width:8%">Qty<span class="ar">الكمية</span></th>
+            <th class="num" style="width:9%">Rate<span class="ar">السعر</span></th>
+            <th class="num" style="width:8%">VAT%<span class="ar">ضريبة٪</span></th>
+            <th class="num" style="width:9%">VAT<span class="ar">الضريبة</span></th>
+            <th class="num" style="width:12%">Amount (AED)<span class="ar">المبلغ</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="center">1</td><td>X-ray Carpal Bones Metacarpal Bone</td><td class="center">—</td><td class="num">1.0</td><td class="num">900.00</td><td class="num">0</td><td class="num">0.00</td><td class="num">900.00</td></tr>
+          <tr><td class="center">2</td><td>Magnetic Resonance Imaging of Right Hand Joint</td><td class="center">—</td><td class="num">1.0</td><td class="num">1200.00</td><td class="num">0</td><td class="num">0.00</td><td class="num">1200.00</td></tr>
+          <tr><td class="center">3</td><td>Naproxen 500mg</td><td class="center">BOX</td><td class="num">3.0</td><td class="num">40.00</td><td class="num">0</td><td class="num">0.00</td><td class="num">120.00</td></tr>
+          <tr><td class="center">4</td><td>Chlorzoxazone 250mg</td><td class="center">BOX</td><td class="num">2.0</td><td class="num">80.00</td><td class="num">0</td><td class="num">0.00</td><td class="num">160.00</td></tr>
+          <tr><td class="center">5</td><td>Diclofenac Diethylamine Emulgel 50mg 1%</td><td class="center">—</td><td class="num">1.0</td><td class="num">80.00</td><td class="num">0</td><td class="num">0.00</td><td class="num">80.00</td></tr>
+          <tr><td class="center">6</td><td>Wrist Immobilization Splint</td><td class="center">—</td><td class="num">1.0</td><td class="num">30.00</td><td class="num">0</td><td class="num">0.00</td><td class="num">30.00</td></tr>
+        </tbody>
+      </table>
+
+      <section class="bottom">
+        <div>
+          <div class="vat-note">
+            <h4>Notes</h4>
+            <div class="vrow"><span>Report Generated</span><span>23-06-2026</span></div>
+            <div class="vrow"><span>Printed By</span><span>Abhijith K.</span></div>
+            <div class="vrow"><span>Page</span><span>1 of 1</span></div>
+          </div>
+          <div class="bank">
+            <h4>Bank / Payment Details</h4>
+            <div class="brow"><span class="k">Account Name</span><span class="v">Knight Pharmacy LLC</span></div>
+            <div class="brow"><span class="k">Bank</span><span class="v">Abu Dhabi Commercial Bank (ADCB)</span></div>
+            <div class="brow"><span class="k">IBAN</span><span class="v">AE33 0030 0000 9876 5432 101</span></div>
+          </div>
+        </div>
+        <div class="summary">
+          <div class="srow"><span class="lbl">Gross Amount / الإجمالي</span><span class="val">2490.00</span></div>
+          <div class="srow"><span class="lbl">Discount / خصم (0.0%)</span><span class="val">0.00</span></div>
+          <div class="srow"><span class="lbl">VAT Amount / الضريبة</span><span class="val">0.00</span></div>
+          <div class="srow grand"><span class="lbl">Net Amount (AED)</span><span class="val">2490.00</span></div>
+          <div class="srow sub"><span class="lbl">Cash Payment / نقدًا</span><span class="val">2490.00</span></div>
+          <div class="srow sub"><span class="lbl">Credit Payment / بطاقة</span><span class="val">NA</span></div>
+        </div>
+      </section>
+
+      <div class="words-row">
+        <div class="aw">
+          <div class="lbl">Amount in Words</div>
+          <div class="val">UAE Dirham Two Thousand Four Hundred Ninety Only</div>
+        </div>
+        <div class="cur">AED 2490.00</div>
+      </div>
+
+      <div class="tc">
+        <h4>Terms &amp; Conditions / الشروط والأحكام</h4>
+        <ul>
+          <li>Goods once sold will not be taken back or exchanged.</li>
+          <li>Medicines are dispensed against a valid prescription only.</li>
+          <li>All amounts are stated in UAE Dirham (AED), inclusive of VAT where applicable.</li>
+          <li>Please check the medicines, expiry and quantity before leaving the counter.</li>
+          <li>This is a computer-generated tax invoice and is valid without a signature.</li>
+          <li>Retain this invoice for warranty, insurance or return-policy reference.</li>
+        </ul>
+      </div>
+    </div>
+
+    <footer class="foot">
+      <div class="terms">
+        Goods once sold will not be taken back or exchanged.
+        <span class="ar">البضاعة التي تُباع مرة واحدة لن يتم إعادتها أو استبدالها.</span>
+      </div>
+      <div class="sign-row">
+        <div>Biller Name: <b>Abhijith K.</b></div>
+        <div class="sign-box"><div class="sign-line"></div>Authorized Signature / التوقيع</div>
+      </div>
+      <div class="contact">
+        KNIGHT PHARMACY LLC &nbsp;•&nbsp; P.O. Box: 53275, Electra Branch, Abu Dhabi, United Arab Emirates<br>
+        Phone: 971-26219996 &nbsp;•&nbsp; Email: pharmacy@aesmc.com
+      </div>
+    </footer>
+  </div>
+
+</div>
+
+<script>
+  function show(which) {
+    document.querySelectorAll('.invoice').forEach(el => el.classList.remove('active'));
+    document.getElementById(which).classList.add('active');
+    document.getElementById('btn-medical').classList.toggle('active', which === 'medical');
+    document.getElementById('btn-pharmacy').classList.toggle('active', which === 'pharmacy');
+  }
+
+</script>
+</body>
+</html>
